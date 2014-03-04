@@ -61,6 +61,7 @@ int main()
 	glm::mat4 cab_scale = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.2f));
 	glm::mat4 cab_translation = glm::translate(glm::mat4(1.0f), glm::vec3(-2, -0.0, 0));
 	cab.set_model(cab_translation * cab_scale * cab_rotate);
+	cab.set_drawing_mode(GL_LINE_LOOP);
 
 	gl::component trailer;
 	trailer.set_shader(colour_shader);
@@ -68,6 +69,7 @@ int main()
 	trailer.set_colour(glm::vec3(1.0f, 0.0f, 0.0f));
 	glm::mat4 trailer_translation = glm::translate(glm::mat4(1.0f), glm::vec3(-8.5, -0.0, 0));
 	trailer.set_model(trailer_translation);
+	trailer.set_drawing_mode(GL_LINE_LOOP);
 
 
 	// Tires.
@@ -130,6 +132,7 @@ int main()
 	glm::mat4 camera_strafe = glm::mat4(1.0f);
 	glm::mat4 camera_pan = glm::mat4(1.0f);
 
+	bool first_press = false;
 	bool is_turning_left = false;
 	bool is_turning_right = false;
 
@@ -142,10 +145,10 @@ int main()
 	auto increase_speed = [&]() { translate_by += translate_by < 0 ? -default_translate : default_translate; };
 	auto decrease_speed = [&]() { translate_by += translate_by < 0 ? default_translate : -default_translate; };
 
-	auto turn_left = [&]() { is_turning_left = true; };
-	auto turn_right = [&]() { is_turning_right = true; };
-	auto stop_turn_left = [&]()  { is_turning_left = false; };
-	auto stop_turn_right = [&]()  { is_turning_right = false; };
+	auto turn_left = [&]() { is_turning_left = true; first_press = true; };
+	auto turn_right = [&]() { is_turning_right = true; first_press = true; };
+	auto stop_turn_left = [&]()  { is_turning_left = false; first_press = false; };
+	auto stop_turn_right = [&]()  { is_turning_right = false; first_press = false; };
 
 	auto zoom_in   = [&]() { camera_translate = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0.2)); };
 	auto zoom_out  = [&]() { camera_translate = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -0.2)); };
@@ -176,6 +179,11 @@ int main()
 	glfw::add_key_callback(GLFW_PRESS,   GLFW_KEY_S,     pan_down);
 	glfw::add_key_callback(GLFW_RELEASE, GLFW_KEY_W,     pan_stop);
 	glfw::add_key_callback(GLFW_RELEASE, GLFW_KEY_S,     pan_stop);
+
+	glfw::add_key_callback(GLFW_PRESS,   GLFW_KEY_I,     zoom_in);
+	glfw::add_key_callback(GLFW_PRESS,   GLFW_KEY_O,     zoom_out);
+	glfw::add_key_callback(GLFW_RELEASE, GLFW_KEY_I,     zoom_stop);
+	glfw::add_key_callback(GLFW_RELEASE, GLFW_KEY_O,     zoom_stop);
 
 	glfw::add_key_callback(GLFW_PRESS,   GLFW_KEY_A,     strafe_left);
 	glfw::add_key_callback(GLFW_PRESS,   GLFW_KEY_D,     strafe_right);
@@ -211,47 +219,76 @@ int main()
 		{
 			main_view = camera_pan * camera_strafe * camera_translate * main_view;
 
+			glm::vec3 heading_perp = glm::vec3(
+				glm::rotate(glm::mat4(1.0f), (float)M_PI/2, glm::vec3(0, 0, 1)) * heading
+			);
+
 			if (auto_move)
 			{
 				if (is_turning_left)
 				{
 					cab.apply_fp_transformation(
-						glm::rotate(glm::mat4(1.0f), 0.05f, glm::vec3(0, 0, 1)),
+						glm::rotate(glm::mat4(1.0f), 0.02f, glm::vec3(0, 0, 1)),
 						trailer.get_location()
 					);
 
 					trailer.apply_fp_transformation(
-						glm::rotate(glm::mat4(1.0f), 0.05f, glm::vec3(0, 0, 1))
+						glm::rotate(glm::mat4(1.0f), 0.02f, glm::vec3(0, 0, 1))
 					);
 
 					truck_tires.apply_fp_transformation(
-						glm::rotate(glm::mat4(1.0f), 0.05f, glm::vec3(0, 0, 1)),
+						glm::rotate(glm::mat4(1.0f), 0.02f, glm::vec3(0, 0, 1)),
 						trailer.get_location()
 					);
 
-					heading = glm::rotate(glm::mat4(1.0f), 0.05f, glm::vec3(0, 0, 1)) * heading;
+					tires[4].apply_fp_transformation(
+						glm::rotate(glm::mat4(1.0f), -0.03f, heading_perp)
+					);
+
+					tires[5].apply_fp_transformation(
+						glm::rotate(glm::mat4(1.0f), 0.05f, heading_perp)
+					);
+
+					tires[6].apply_fp_transformation(
+						glm::rotate(glm::mat4(1.0f), -0.01f, heading_perp)
+					);
+
+					tires[7].apply_fp_transformation(
+						glm::rotate(glm::mat4(1.0f), 0.03f, heading_perp)
+					);
+
+					tires[8].apply_fp_transformation(
+						glm::rotate(glm::mat4(1.0f), -0.01f, heading_perp)
+					);
+
+					tires[9].apply_fp_transformation(
+						glm::rotate(glm::mat4(1.0f), 0.03f, heading_perp)
+					);
+
+					heading = glm::rotate(glm::mat4(1.0f), 0.02f, glm::vec3(0, 0, 1)) * heading;
 				}
 				if (is_turning_right)
 				{
 					cab.apply_fp_transformation(
-						glm::rotate(glm::mat4(1.0f), -0.05f, glm::vec3(0, 0, 1)),
+						glm::rotate(glm::mat4(1.0f), -0.02f, glm::vec3(0, 0, 1)),
 						trailer.get_location()
 					);
 
 					trailer.apply_fp_transformation(
-						glm::rotate(glm::mat4(1.0f), -0.05f, glm::vec3(0, 0, 1))
+						glm::rotate(glm::mat4(1.0f), -0.02f, glm::vec3(0, 0, 1))
 					);
 
 					truck_tires.apply_fp_transformation(
-						glm::rotate(glm::mat4(1.0f), -0.05f, glm::vec3(0, 0, 1)),
+						glm::rotate(glm::mat4(1.0f), -0.02f, glm::vec3(0, 0, 1)),
 						trailer.get_location()
 					);
 
-					heading = glm::rotate(glm::mat4(1.0f), -0.05f, glm::vec3(0, 0, 1)) * heading;
+					heading = glm::rotate(glm::mat4(1.0f), -0.02f, glm::vec3(0, 0, 1)) * heading;
 				}
 
-				std::cout << "Heading = " << heading.x << " " << heading.y << " " << heading.z << "\n";
-				truck_tires.apply_fp_transformation(glm::rotate(glm::mat4(1.0f), translate_by, glm::vec3(0, 1, 0)));
+				truck_tires.apply_fp_transformation(
+					glm::rotate(glm::mat4(1.0f), translate_by, heading_perp)
+				);
 				truck.update_model(glm::translate(glm::mat4(1.0f), translate_by * glm::vec3(heading)));
 			}
 
